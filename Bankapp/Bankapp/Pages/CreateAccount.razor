@@ -28,11 +28,36 @@
         <button type="submit" class="btn btn-primary">Create</button>
     </EditForm>
 
+<!--- Lägg till Alla Konton -->
+<h4>Alla konton</h4>
+@if(_accounts.Count == 0)
+{
+<p>Det finns inga konton ännu registrera ditt första kotno ovan!</p>
+
+}
+else
+{
+    <ul>
+        @foreach (var account in _accounts)
+        {
+            <li>
+                <strong>@account.Name</strong> - @account.AccountType - @account.Balance - @account.Currency
+                <small>(uppdaterad @account.LastUppdated.ToLocalTime())</small>
+            </li>
+        }
+    </ul>
+}
 
 @code 
 {
     private readonly CreateAccountModel _model = new();
+    private List<IBankAccount> _accounts = new();
 
+    protected override void OnInitialized()
+    {
+        _accounts = AccountService.GetAccounts().ToList();
+        base.OnInitialized();
+    }
     private Task CreateAccountAsync()
     {
         try 
@@ -42,12 +67,15 @@
                 _model.AccountType,
                 _model.Currency,
                 _model.InitialBalance);
+
+                _accounts = AccountService.GetAccounts().ToList();
+                _model.Clear();
         }
 
         catch (Exception exception)
         {
             Console.WriteLine(exception);
-            throw;
+        
         }
 
         return Task.CompletedTask;
