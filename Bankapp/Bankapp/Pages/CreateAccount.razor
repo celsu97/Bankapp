@@ -1,4 +1,5 @@
 @page "/CreateAccount"
+@using Bankapp.Services
 @inject IAccountService AccountService
 
 <h3>Vänligen skapa ett konto</h3>
@@ -53,12 +54,14 @@ else
     private readonly CreateAccountModel _model = new();
     private List<IBankAccount> _accounts = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _accounts = AccountService.GetAccounts().ToList();
-        base.OnInitialized();
+        _accounts = await AccountService.GetAccounts();
     }
-    private Task CreateAccountAsync()
+
+
+
+    private async Task CreateAccountAsync()
     {
         try 
         {
@@ -68,8 +71,10 @@ else
                 _model.Currency,
                 _model.InitialBalance);
 
-                _accounts = AccountService.GetAccounts().ToList();
-                _model.Clear();
+            _accounts = await AccountService.GetAccounts();
+            _model.Clear();
+
+            StateHasChanged();
         }
 
         catch (Exception exception)
@@ -77,8 +82,6 @@ else
             Console.WriteLine(exception);
         
         }
-
-        return Task.CompletedTask;
     }
 
     private class CreateAccountModel
