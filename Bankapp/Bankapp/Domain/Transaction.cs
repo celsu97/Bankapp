@@ -1,18 +1,38 @@
-namespace Bankapp.Domain;
+using System.ComponentModel.DataAnnotations;
 
-public enum TransactionType
+namespace Bankapp.Domain
 {
-    Deposit,
-    Withdrawal,
-    Transfer
-}
-public class Transaction
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public DateTime Date { get; set; } = DateTime.Now;
-    public decimal Amount { get; set; }
-    public TransactionType Type { get; set; }
-    public Guid FromAccountId { get; set; }
-    public Guid? ToAccountId { get; set; } //Null om inte överföring
-    public decimal BalanceAfterTransaction { get; set; }
+    public enum TransactionType
+    {
+        Deposit,
+        Withdrawal,
+        TransferIn,
+        TransferOut
+    }
+
+    public class Transaction
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public DateTime TimeStamp { get; set; } = DateTime.Now;
+        public TransactionType transactionType { get; set; }
+        public decimal Amount { get; set; }
+        public CurrencyType Currency { get; set; }
+        public decimal BalanceAfterTransaction { get; set; }
+        public Guid? FromAccountId { get; set; }
+        public Guid? ToAccountId { get; set; }
+
+
+        //public Transaction()
+        //{
+        //    TimeStamp = DateTime.UtcNow;
+        //}
+
+        //public Transaction(Guid fromAccountId, Guid toAccountId, decimal amount)
+        //{
+        //    FromAccountId = fromAccountId;
+        //    ToAccountId = toAccountId;
+        //    Amount = amount;
+        //    TimeStamp = DateTime.UtcNow;
+        //}
+    }
 }

@@ -7,12 +7,13 @@ public interface IBankAccount
 {
     Guid Id { get; }
     string Name { get; }
-    public AccountType AccountType { get; }
-    string Currency { get; }
+    AccountType AccountType { get; }
+    CurrencyType Currency {  get; }
     decimal Balance { get; }
-    DateTime LastUppdated { get; }
+    DateTime LastUpdated { get; }
 
     void Withdraw(decimal amount);
     void Deposit(decimal amount);
 
+    void TransferTo(BankAccount toAccount, decimal amount);
 }

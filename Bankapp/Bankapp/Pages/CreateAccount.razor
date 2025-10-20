@@ -1,71 +1,94 @@
 @page "/CreateAccount"
 @using Bankapp.Services
-@inject IAccountService AccountService
+@inject IAccountService AccountService;
 
-<h3>Vänligen skapa ett konto</h3>
+
+<h3 class="mb-3">Create Account</h3>
 <EditForm Model="_model" OnValidSubmit="CreateAccountAsync">
-    <ValidationSummary />
-    <div class="mb-2">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger mb-3" />
+
+    <div class="mb-3">
         <label>Account Name</label>
-        <InputText @bind-Value="_model.Name" />
+        <InputText @bind-Value="_model.Name" class="form-control" />
     </div>
 
-    <div className="mb-2">
-        <label>Account Type</label>
-        <InputSelect @bind-Value="_model.AccountType">
-            <option value="">Välj kontotyp</option>
-            <option value="@AccountType.Deposit">Baskonto</option>
-            <option value="@AccountType.Savings">Sparkonto</option>
+    <div class="mb-3">
+        <label class="form-label">Account Type</label>
+        <InputSelect @bind-Value="_model.AccountType" class="form-select">
+            <option value="@AccountType.Deposit">Deposit Account</option>
+            <option value="@AccountType.Savings">Savings Account</option>
         </InputSelect>
     </div>
-    <div className="mb-2">
-        <label>Currency</label>
-        <InputText @bind-Value="_model.Currency">SEK</InputText>
-    </div>  
-    <div className="mb-2">
-        <label>Balance</label>
-        <InputNumber @bind-Value="_model.InitialBalance"></InputNumber>
+
+    <div class="mb-3">
+        <label class="form-label">Currency</label>
+        <InputSelect @bind-Value="_model.Currency" class="form-select">
+            <option value="@CurrencyType.SEK">SEK</option>
+            <option value="@CurrencyType.Euro">Euro</option>
+        </InputSelect>
     </div>
-        <button type="submit" class="btn btn-primary">Create</button>
+
+    <div class="mb-3">
+        <label class="form-label">Balance</label>
+        <InputNumber @bind-Value="_model.InitialBalance" class="form-control" min="0.01" step="0.01"></InputNumber>
+        
+    </div>
+
+    <button type="submit" class="btn btn-primary" >Create</button>
     </EditForm>
 
-<!--- Lägg till Alla Konton -->
-<h4>Alla konton</h4>
+    <div class="mb-3">
+
+    </div>
+
+
+<h3 class="mb-3">Alla konton</h3>
 @if(_accounts.Count == 0)
 {
-<p>Det finns inga konton ännu registrera ditt första konto ovan!</p>
-
+    <p>Det finns inga konton ännu, registrera ditt första ovan!</p>
 }
 else
 {
-    <ul>
-        @foreach (var account in _accounts)
+    <ul class="list-group">
+        @foreach(var account in _accounts)
         {
-            <li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
                 <strong>@account.Name</strong> - @account.AccountType - @account.Balance - @account.Currency
-                <small>(uppdaterad @account.LastUppdated.ToLocalTime())</small>
+                <small>(uppdaterad @account.LastUpdated.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"))</small>
+                </div>
+                <button class="btn btn-danger btn-sm" @onclick="() => DeleteAccountAsync(account.Id)">Delete </button>
             </li>
         }
     </ul>
 }
 
-@code 
-{
-    private readonly CreateAccountModel _model = new();
+
+@code {
+
+    private CreateAccountModel _model = new();
     private List<IBankAccount> _accounts = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _accounts = await AccountService.GetAccounts();
-    }
 
+        {
+            _accounts = await AccountService.GetAccounts();
+
+            //await base.OnInitializedAsync();
+        }
+
+    }
 
 
     private async Task CreateAccountAsync()
     {
-        try 
+        try
         {
-            AccountService.CreateAccount( 
+            Console.WriteLine(_model.Name);
+
+            await AccountService.CreateAccount(
                 _model.Name,
                 _model.AccountType,
                 _model.Currency,
@@ -73,31 +96,55 @@ else
 
             _accounts = await AccountService.GetAccounts();
             _model.Clear();
-
-            StateHasChanged();
         }
 
         catch (Exception exception)
         {
             Console.WriteLine(exception);
-        
+            throw;
+
+        } 
+    }
+
+    private async Task DeleteAccountAsync(Guid Id)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", $"Vill du verkligen ta bort kontot?");
+        if (!confirm)
+            return;
+
+        try
+        {
+            await AccountService.DeleteAccount(Id);
+            _accounts = await AccountService.GetAccounts(); // uppdaterar listan
+            StateHasChanged(); // uppdaterar UI
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fel vid borttagning av konto: {ex.Message}");
         }
     }
 
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// 
     private class CreateAccountModel
     {
-        public string? Name { get; set;}
-        public AccountType AccountType { get; set;}
-        public string? Currency { get; set;}
-        public decimal InitialBalance { get; set;} = 0;
+        public string? Name { get; set; }
+        public AccountType AccountType { get; set; }
+        public CurrencyType Currency { get; set; }
+        public decimal InitialBalance { get; set; } = 0;
 
         public void Clear()
         {
             Name = string.Empty;
             AccountType = AccountType.Deposit;
-            Currency = "SEK";
+            Currency = CurrencyType.SEK;
             InitialBalance = 0;
-
         }
     }
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
 }

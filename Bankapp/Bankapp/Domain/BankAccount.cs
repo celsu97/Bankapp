@@ -1,70 +1,102 @@
 
+
 using System.Text.Json.Serialization;
 
-namespace Bankapp.Domain;
-
-public class BankAccount : IBankAccount
+namespace Bankapp.Domain
 {
-    public Guid Id { get; private set; } = Guid.NewGuid();
-
-    public string Name { get; private set; }
-
-    public AccountType AccountType { get; private set; }
-
-    public string Currency { get; private set; }
-
-    public decimal Balance { get; private set; }
-
-    public DateTime LastUppdated { get; private set; }
-    public List<Transaction> Transactions { get; private set; } = new();
-
-
-    public BankAccount(string name, AccountType accountType, string currency, decimal initialBalance)
+    public class BankAccount : IBankAccount
     {
-        Name = name;
-        AccountType = accountType;
-        Currency = currency;
-        Balance = initialBalance;
-        LastUppdated = DateTime.Now;
-    }
+        public Guid Id { get; private set; } = Guid.NewGuid();
 
-    [JsonConstructor]
-    public BankAccount(Guid id, string name, AccountType accountType, string currency, decimal balance, DateTime lastUppdated)
-    {
-        Id = id;
-        Name = name;
-        AccountType = accountType;
-        Currency = currency;
-        Balance = balance;
-        LastUppdated = lastUppdated;
-    }
-    public void Deposit(decimal amount)
-    {
-        if (amount <= 0) throw new ArgumentException("Beloppet måste vara större än 0.");
-        Balance += amount;
-        LastUppdated = DateTime.Now;
+        public string Name { get; private set; }
 
-        Transactions.Add(new Transaction
+        public AccountType AccountType { get; private set; }
+
+        public CurrencyType Currency { get; private set; }
+
+        public decimal Balance { get; private set; }
+
+        public DateTime LastUpdated { get; private set; }
+
+        public readonly List<Transaction> _transaction = new List<Transaction>();
+        
+
+        public BankAccount(string name, AccountType accountType, CurrencyType currency, decimal initialBalance)
         {
-            Type = TransactionType.Deposit,
-            Amount = amount,
-            BalanceAfterTransaction = Balance
-        });
-    }
+            Name = name;
+            AccountType = accountType;
+            Currency = currency;
+            Balance = initialBalance;
+            LastUpdated = DateTime.Now;
+        }
 
-    public void Withdraw(decimal amount)
-    {
-        if (amount <= 0) throw new ArgumentException("Beloppet måste vara större än 0.");
-        if (Balance < amount) throw new InvalidOperationException("Otillräckligt saldo");
-        Balance -= amount;
-        LastUppdated = DateTime.Now;
-
-        Transactions.Add(new Transaction
+        [JsonConstructor]
+        public BankAccount(Guid id, string name, AccountType accountType, CurrencyType currency, decimal balance, DateTime lastUpdated)
         {
-            Type = TransactionType.Withdrawal,
-            Amount = amount,
-            BalanceAfterTransaction = Balance
-        });
-        throw new NotImplementedException();
+            Id = id;
+            Name = name;
+            AccountType = accountType;
+            Currency = currency;
+            Balance = balance;
+            LastUpdated = lastUpdated;
+        }
+
+        public void TransferTo(BankAccount toAccount, decimal amount)
+        {
+            // från vilket konto
+            Balance -= amount;
+            LastUpdated = DateTime.Now;
+            _transaction.Add(new Transaction
+            {
+                transactionType = TransactionType.TransferOut,
+                Amount = amount,
+                BalanceAfterTransaction = Balance,
+                FromAccountId = Id,
+                ToAccountId = toAccount.Id,
+            });
+
+            // till vilket konto
+            toAccount.Balance += amount;
+            toAccount.LastUpdated = DateTime.Now;
+            toAccount._transaction.Add(new Transaction
+            {
+                transactionType = TransactionType.TransferIn,
+                Amount = amount,
+                BalanceAfterTransaction = Balance,
+                FromAccountId = Id,
+                ToAccountId = toAccount.Id,
+
+            });
+        }
+
+        public void Deposit(decimal amount)
+        {
+            if (amount < 0) throw new ArgumentException("Beloppet måste vara större än 0!");
+            Balance += amount;
+            LastUpdated = DateTime.UtcNow;
+            
+            _transaction.Add(new Transaction
+            {
+                transactionType = TransactionType.Deposit,
+                Amount = amount,
+                BalanceAfterTransaction = Balance
+            });
+        }
+
+        public void Withdraw(decimal amount)
+        {
+            if (amount < 0) throw new ArgumentException("Beloppet måste vara större än 0!");
+
+            if (Balance < amount) throw new InvalidOperationException("Inte tillräckligt saldo!");
+            Balance -= amount;
+            LastUpdated = DateTime.UtcNow;
+
+            _transaction.Add(new Transaction
+            {
+                transactionType = TransactionType.Withdrawal,
+                Amount = amount,
+                BalanceAfterTransaction = Balance
+            });
+        }
     }
 }
