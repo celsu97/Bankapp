@@ -12,7 +12,7 @@ namespace Bankapp.Domain
 
         public AccountType AccountType { get; private set; }
 
-        public CurrencyType Currency { get; private set; }
+        public CurrencyType Currency { get; set; }
 
         public decimal Balance { get; private set; }
 

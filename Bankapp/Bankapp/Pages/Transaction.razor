@@ -2,6 +2,7 @@
 @using Bankapp.Domain
 @using Bankapp.Services
 @inject IAccountService AccountService
+@inject IStorageService StorageService  
 
 
 <h3 class="mb-3">Transaction</h3>
@@ -70,6 +71,7 @@ else
     private readonly TransferFormModel _model = new();
     private List<IBankAccount> _accounts = new();
     private List<IBankAccount> _toAccounts = new();
+    private List<Transaction> _transactions = new();
 
     private class TransferFormModel
     {
@@ -80,9 +82,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _accounts = await AccountService.GetAccounts();
+        _accounts = await AccountService.GetAccountsAsync();
 
         _toAccounts = _accounts;
+        _transactions = await StorageService.GetItemAsync<List<Transaction>>("transactions") ?? new List<Transaction>();
     }
 
     private async Task OnSubmitAsync()
@@ -103,7 +106,7 @@ else
             await AccountService.Transfer(_model.FromAccountId, _model.ToAccountId, _model.Amount);
 
             //uppdatera lista
-            _accounts = await AccountService.GetAccounts();
+            _accounts = await AccountService.GetAccountsAsync();
 
             //visa bekräftelse
             var from = _accounts.First(x => x.Id == _model.FromAccountId);
@@ -116,7 +119,7 @@ else
         {
             Console.WriteLine(exception.Message);
         }
-        
+
     }
 
     private void HandleFormChanged(ChangeEventArgs eventArgs)

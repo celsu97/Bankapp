@@ -4,7 +4,7 @@ namespace Bankapp.Interfaces
     public interface IAccountService
     {
         Task<IBankAccount> CreateAccount(string name, AccountType accountType, CurrencyType currency, decimal initialBalance);
-        Task<List<IBankAccount>> GetAccounts();
+        Task<List<IBankAccount>> GetAccountsAsync();
 
         Task DeleteAccount(Guid Id);
         Task UpdateAccount(IBankAccount updatedAccount);

@@ -6,7 +6,7 @@
 
 <div class="mb-3">
     <label class="form-label">Välj Konto</label>
-    <InputSelect @bind-Value="_selectedAccountId" class="form-select" @bind-Value:after="LoadTransactions">
+    <InputSelect @bind-Value="_selectedAccountId" class="form-select" @onchange="LoadTransactions">
         <option value="@Guid.Empty">-- Välj ett konto --</option>
         @foreach (var account in _accounts)
         {
@@ -15,123 +15,19 @@
     </InputSelect>
 </div>
 
-@if (_selectedAccountId == Guid.Empty)
-{
-    <div class="alert alert-light border">
-        Välj ett konto för att se transaktioner.
-    </div>
-}
-else if (_isLoading)
-{
-    <div class="alert alert-light border">
-        Laddar Transaktion...
-    </div>
-}
-else if (_transactions.Count == 0)
-{
-    <div class="alert alert-info">
-        Inga transaktioner hittades för valda konton.
-    </div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th @onclick="() => SortBy(\"Date\")" style="cursor:pointer">Date @GetSortIndicator("Date")</th>
-                    <th @onclick="() => SortBy(\"Type\")" style="cursor:pointer">Type @GetSortIndicator("Type")</th>
-                    <th @onclick="() => SortBy(\"Amount\")" style="cursor:pointer">Amount @GetSortIndicator("Amount")</th>
-                    <th @onclick="() => SortBy(\"Balance\")" style="cursor:pointer">Balance After @GetSortIndicator("Balance")</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var tx in _transactions)
-                {
-                    <tr>
-                        <td>@tx.TimeStamp.ToString("yyyy-MM-dd HH:mm")</td>
-                        <td>@tx.TransactionType</td>
-                        <td>@tx.Amount.ToString("C", _culture)</td>
-                        <td>@tx.BalanceAfter.ToString("C", _culture)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
 
 @code {
     private List<IBankAccount> _accounts = new();
     private List<Transaction> _transactions = new();
     private Guid _selectedAccountId = Guid.Empty;
-    private bool _isLoading = false;
-    private System.Globalization.CultureInfo _culture = new("sv-SE");
-
-    private string _currentSortColumn = "Date";
-    private bool _isSortAscending = false;
 
     protected override async Task OnInitializedAsync()
     {
-        _accounts = (await AccountService.GetAccounts()).ToList();
+        _accounts = (await AccountService.GetAccountsAsync()).ToList();
+    }
+    private async Task LoadTransactions(ChangeEventArgs e)
+    {
+        //Kod kommer snart
     }
 
-    private async Task LoadTransactions()
-    {
-        if (_selectedAccountId == Guid.Empty)
-        {
-            _transactions.Clear();
-            return;
-        }
-
-        _isLoading = true;
-        StateHasChanged();
-
-        var selectedAccount = _accounts.FirstOrDefault(a => a.Id == _selectedAccountId);
-        _culture = GetCultureInfo(selectedAccount?.Currency);
-
-        _transactions = await AccountService.GetTransactionsForAccount(_selectedAccountId);
-        SortBy(_currentSortColumn, false); // Apply initial sort
-
-        _isLoading = false;
-        StateHasChanged();
-    }
-
-    private void SortBy(string column, bool toggle = true)
-    {
-        if (toggle)
-        {
-            if (_currentSortColumn == column)
-            {
-                _isSortAscending = !_isSortAscending;
-            }
-            else
-            {
-                _currentSortColumn = column;
-                _isSortAscending = true;
-            }
-        }
-
-        _transactions = _currentSortColumn switch
-        {
-            "Date" => _isSortAscending ? _transactions.OrderBy(t => t.TimeStamp).ToList() : _transactions.OrderByDescending(t => t.TimeStamp).ToList(),
-            "Type" => _isSortAscending ? _transactions.OrderBy(t => t.TransactionType.ToString()).ToList() : _transactions.OrderByDescending(t => t.TransactionType.ToString()).ToList(),
-            "Amount" => _isSortAscending ? _transactions.OrderBy(t => t.Amount).ToList() : _transactions.OrderByDescending(t => t.Amount).ToList(),
-            "Balance" => _isSortAscending ? _transactions.OrderBy(t => t.BalanceAfter).ToList() : _transactions.OrderByDescending(t => t.BalanceAfter).ToList(),
-            _ => _transactions
-        };
-        StateHasChanged();
-    }
-
-    private string GetSortIndicator(string column)
-    {
-        if (_currentSortColumn != column) return "";
-        return _isSortAscending ? "▲" : "▼";
-    }
-
-    private System.Globalization.CultureInfo GetCultureInfo(CurrencyType? currency) => currency switch
-    {
-        CurrencyType.SEK => new System.Globalization.CultureInfo("sv-SE"),
-        CurrencyType.Euro => new System.Globalization.CultureInfo("fr-FR"),
-        _ => System.Globalization.CultureInfo.CurrentCulture
-    };
 }

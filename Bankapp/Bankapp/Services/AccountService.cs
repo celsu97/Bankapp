@@ -36,7 +36,7 @@ namespace Bankapp.Services
             return account;
         }
 
-        public async Task<List<IBankAccount>> GetAccounts()
+        public async Task<List<IBankAccount>> GetAccountsAsync()
         {
             await IsInitialized();
             return _accounts.Cast<IBankAccount>().ToList();
@@ -71,6 +71,7 @@ namespace Bankapp.Services
 
         public async Task Transfer(Guid fromAccountId,  Guid toAccountId, decimal amount)
         {
+            await IsInitialized();
             var fromAccount = _accounts.OfType<BankAccount>().FirstOrDefault(x => x.Id == fromAccountId)
                 ?? throw new KeyNotFoundException($"Account with ID {fromAccountId} not found.");
 
@@ -78,6 +79,8 @@ namespace Bankapp.Services
                 ?? throw new KeyNotFoundException($"Account with ID {fromAccountId} not found.");
 
             fromAccount.TransferTo(toAccount, amount);
+
+            await SaveAsync();
         }
 
     }

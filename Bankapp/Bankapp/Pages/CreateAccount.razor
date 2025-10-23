@@ -74,7 +74,7 @@ else
     {
 
         {
-            _accounts = await AccountService.GetAccounts();
+            _accounts = await AccountService.GetAccountsAsync();
 
             //await base.OnInitializedAsync();
         }
@@ -94,7 +94,7 @@ else
                 _model.Currency,
                 _model.InitialBalance);
 
-            _accounts = await AccountService.GetAccounts();
+            _accounts = await AccountService.GetAccountsAsync();
             _model.Clear();
         }
 
@@ -115,7 +115,7 @@ else
         try
         {
             await AccountService.DeleteAccount(Id);
-            _accounts = await AccountService.GetAccounts(); // uppdaterar listan
+            _accounts = await AccountService.GetAccountsAsync(); // uppdaterar listan
             StateHasChanged(); // uppdaterar UI
         }
         catch (Exception ex)
