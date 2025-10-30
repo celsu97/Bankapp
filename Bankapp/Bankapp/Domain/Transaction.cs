@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Bankapp.Domain
 {
+<<<<<<< Updated upstream
     public enum TransactionType
     {
         Deposit,
@@ -35,4 +36,22 @@ namespace Bankapp.Domain
         //    TimeStamp = DateTime.UtcNow;
         //}
     }
+=======
+    Deposit,
+    Withdrawal,
+    TransferIn,
+    TransferOut
+}
+
+public class Transaction
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public DateTime TimeStamp { get; set; } = DateTime.UtcNow;
+    public decimal Amount { get; set; }
+    public TransactionType TransactionType { get; set; }
+    public CurrencyType Currency { get; set; }
+    public Guid? FromAccountId { get; set; }
+    public Guid? ToAccountId { get; set; } // Null if not a transfer
+    public decimal BalanceAfterTransaction { get; set; }
+>>>>>>> Stashed changes
 }

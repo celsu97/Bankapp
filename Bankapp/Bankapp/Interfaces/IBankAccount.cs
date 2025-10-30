@@ -1,10 +1,9 @@
-namespace Bankapp.Interfaces;
+using System;
+using System.Collections.Generic;
 
-/// <summary>
-/// Interface containing the BankAccount methods
-/// </summary>
-public interface IBankAccount
+namespace Bankapp.Interfaces
 {
+<<<<<<< Updated upstream
     Guid Id { get; }
     string Name { get; }
     AccountType AccountType { get; }
@@ -16,4 +15,16 @@ public interface IBankAccount
     void Deposit(decimal amount);
 
     void TransferTo(BankAccount toAccount, decimal amount);
+=======
+    public interface IBankAccount
+    {
+        Guid Id { get; }
+        string Name { get; }
+        decimal Balance { get; }
+        IReadOnlyList<Transaction> Transactions { get; }
+        void Deposit(decimal amount);
+        void Withdraw(decimal amount);
+        void TransferTo(IBankAccount toAccount, decimal amount);
+    }
+>>>>>>> Stashed changes
 }

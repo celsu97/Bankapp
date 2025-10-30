@@ -1,5 +1,6 @@
 @page "/History"
 @using Bankapp.Domain
+<<<<<<< Updated upstream
 @inject IAccountService AccountService
 
 <h3>History</h3>
@@ -30,4 +31,173 @@
         //Kod kommer snart
     }
 
+=======
+@using Bankapp.Services
+@using DomainTransaction = Bankapp.Domain.Transaction
+@inject IAccountService AccountService
+
+<h2 class="mb-4 text-center fw-bold">💳 Transaction History</h2>
+
+@if (_accounts.Count == 0)
+{
+    <p class="text-muted text-center">Inga konton finns.</p>
+}
+else
+{
+    <div class="card shadow-sm border-0 p-4 mb-4">
+        <h5 class="mb-3">Select Account</h5>
+        <InputSelect TValue="Guid"
+                     class="form-select mb-3"
+                     @bind-Value="SelectedAccountId">
+            @foreach (var account in _accounts)
+            {
+                <option value="@account.Id">@account.Name - Balance: @account.Balance.ToString("N2")</option>
+            }
+        </InputSelect>
+
+        <div class="mb-3">
+            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SetSort(SortKey.Date)">
+                Sort by Date @(currentKey == SortKey.Date ? (descending ? "↓" : "↑") : "")
+            </button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="() => SetSort(SortKey.Amount)">
+                Sort by Amount @(currentKey == SortKey.Amount ? (descending ? "↓" : "↑") : "")
+            </button>
+        </div>
+    </div>
+
+    @if (_selectedAccount == null || _selectedAccount.Transactions.Count == 0)
+    {
+        <p class="text-muted text-center">Inga transaktioner än.</p>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0 p-4">
+            <h5 class="mb-3">Transactions for @_selectedAccount.Name</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>Balance After</th>
+                            <th>From → To</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    @foreach (var t in SortedTransactions())
+    {
+        <tr>
+            <td>@t.TimeStamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+            <td class="@GetAmountClass(t)">@t.Amount.ToString("N2")</td>
+            <td>
+                @switch (t.TransactionType)
+                {
+                    case TransactionType.Deposit:
+                        <span class="badge bg-success">Deposit</span>
+                        break;
+                    case TransactionType.Withdrawal:
+                        <span class="badge bg-warning text-dark">Withdraw</span>
+                        break;
+                    case TransactionType.TransferIn:
+                        <span class="badge bg-primary">Transfer In</span>
+                        break;
+                    case TransactionType.TransferOut:
+                        <span class="badge bg-secondary">Transfer Out</span>
+                        break;
+                }
+            </td>
+            <td>@t.BalanceAfterTransaction.ToString("N2")</td>
+            <td>
+                @if (t.FromAccountId.HasValue || t.ToAccountId.HasValue)
+                {
+                    <span>@(t.FromAccountId?.ToString()[..6]) → @(t.ToAccountId?.ToString()[..6])</span>
+                }
+                else
+                {
+                    <span>-</span>
+                }
+            </td>
+        </tr>
+    }
+</tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<BankAccount> _accounts = new();
+    private BankAccount? _selectedAccount;
+    private Guid _selectedAccountId;
+
+    private enum SortKey { Date, Amount }
+    private SortKey currentKey = SortKey.Date;
+    private bool descending = true;
+
+    private void SetSort(SortKey sortKey)
+    {
+        if (currentKey == sortKey)
+            descending = !descending;
+        else
+        {
+            currentKey = sortKey;
+            descending = true;
+        }
+    }
+
+    private Guid SelectedAccountId
+    {
+        get => _selectedAccountId;
+        set
+        {
+            if (_selectedAccountId == value) return;
+            _selectedAccountId = value;
+            _selectedAccount = _accounts.FirstOrDefault(a => a.Id == value);
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AccountService.EnsureLoadedAsync();
+        _accounts = AccountService.GetAccounts();
+
+        if (_accounts.Count > 0)
+        {
+            _selectedAccountId = _accounts[0].Id;
+            _selectedAccount = _accounts[0];
+        }
+    }
+
+    private IEnumerable<DomainTransaction> SortedTransactions()
+    {
+        if (_selectedAccount == null) return Enumerable.Empty<DomainTransaction>();
+
+        var sortedList = _selectedAccount.Transactions.AsEnumerable();
+        sortedList = currentKey switch
+        {
+            SortKey.Amount => descending
+                ? sortedList.OrderByDescending(t => t.Amount)
+                : sortedList.OrderBy(t => t.Amount),
+            _ => descending
+                ? sortedList.OrderByDescending(t => t.TimeStamp)
+                : sortedList.OrderBy(t => t.TimeStamp)
+        };
+        return sortedList;
+    }
+
+    private string GetAmountClass(DomainTransaction t)
+    {
+        return t.TransactionType switch
+        {
+            TransactionType.Deposit => "text-success fw-bold",
+            TransactionType.TransferIn => "text-primary fw-bold",
+            TransactionType.Withdrawal => "text-danger fw-bold",
+            TransactionType.TransferOut => "text-secondary fw-bold",
+            _ => ""
+        };
+    }
+>>>>>>> Stashed changes
 }

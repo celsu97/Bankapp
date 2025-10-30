@@ -1,5 +1,6 @@
 @page "/Transaction"
 @using Bankapp.Domain
+<<<<<<< Updated upstream
 @using Bankapp.Services
 @inject IAccountService AccountService
 @inject IStorageService StorageService  
@@ -148,3 +149,169 @@ else
 
     }
 
+=======
+@using Bankapp.Interfaces
+@inject IAccountService AccountService
+
+<h2 class="mb-4 text-center fw-bold">Transactions</h2>
+
+<div class="card shadow-sm border-0 p-4 mb-4">
+    <h5 class="mb-3">New Transaction</h5>
+    <div class="row g-3 align-items-end">
+
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Transaction Type</label>
+            <select class="form-select" @bind="transactionType">
+                <option value="">Select...</option>
+                <option value="Deposit">Deposit</option>
+                <option value="Withdraw">Withdraw</option>
+                <option value="Transfer">Transfer</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">From Account</label>
+            <select class="form-select" @bind="selectedFromAccountId">
+                <option value="">Select...</option>
+                @foreach (var a in accounts)
+                {
+                    <option value="@a.Id">@a.Name</option>
+                }
+            </select>
+        </div>
+
+        @if (transactionType == "Transfer")
+        {
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">To Account</label>
+                <select class="form-select" @bind="selectedToAccountId">
+                    <option value="">Select...</option>
+                    @foreach (var a in accounts)
+                    {
+                        <option value="@a.Id">@a.Name</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Amount</label>
+            <input type="number" class="form-control" @bind="transactionAmount" min="0" step="0.01" />
+        </div>
+
+        <div class="col-12 d-flex justify-content-center mt-3">
+            <button class="btn btn-primary px-4" @onclick="SubmitTransactionAsync" disabled="@(string.IsNullOrEmpty(transactionType))">
+                <i class="bi bi-arrow-repeat me-1"></i> Submit Transaction
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="col-12">
+                <div class="alert alert-danger mt-2">@errorMessage</div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="col-12">
+                <div class="alert alert-success mt-2">@successMessage</div>
+            </div>
+        }
+
+    </div>
+</div>
+
+@code {
+    private List<BankAccount> accounts = new();
+    private string transactionType = "";
+    private Guid? selectedFromAccountId;
+    private Guid? selectedToAccountId;
+    private decimal transactionAmount;
+
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AccountService.EnsureLoadedAsync();
+        accounts = AccountService.GetAccounts();
+    }
+
+    private async Task SubmitTransactionAsync()
+    {
+        if (!selectedFromAccountId.HasValue)
+        {
+            errorMessage = "Please select a 'From' account.";
+            successMessage = "";
+            return;
+        }
+
+        var fromAccount = accounts.First(a => a.Id == selectedFromAccountId.Value);
+        BankAccount? toAccount = null;
+        if (transactionType == "Transfer")
+        {
+            if (!selectedToAccountId.HasValue)
+            {
+                errorMessage = "Please select a 'To' account.";
+                successMessage = "";
+                return;
+            }
+            toAccount = accounts.First(a => a.Id == selectedToAccountId.Value);
+
+            if (toAccount.Id == fromAccount.Id)
+            {
+                errorMessage = "Cannot transfer to the same account.";
+                successMessage = "";
+                return;
+            }
+        }
+
+        if (transactionAmount <= 0)
+        {
+            errorMessage = "Amount must be greater than 0.";
+            successMessage = "";
+            return;
+        }
+
+        if ((transactionType == "Withdraw" || transactionType == "Transfer") && transactionAmount > fromAccount.Balance)
+        {
+            errorMessage = "Insufficient funds!";
+            successMessage = "";
+            return;
+        }
+
+        try
+        {
+            switch (transactionType)
+            {
+                case "Deposit":
+                    await AccountService.DepositAsync(fromAccount.Id, transactionAmount);
+                    break;
+                case "Withdraw":
+                    await AccountService.WithdrawAsync(fromAccount.Id, transactionAmount);
+                    break;
+                case "Transfer":
+                    await AccountService.Transfer(fromAccount.Id, toAccount!.Id, transactionAmount);
+                    break;
+            }
+
+            // Refresh accounts
+            accounts = AccountService.GetAccounts();
+
+            // Reset form
+            transactionType = "";
+            selectedFromAccountId = null;
+            selectedToAccountId = null;
+            transactionAmount = 0;
+            errorMessage = "";
+            successMessage = "Transaction completed successfully!";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            successMessage = "";
+        }
+    }
+}
+>>>>>>> Stashed changes
