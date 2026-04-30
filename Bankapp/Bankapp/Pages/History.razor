@@ -1,7 +1,239 @@
 @page "/History"
-<h3>History</h3>
+@inject IAccountService AccountService
 
-@code
+<div class="container pb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold">Transaction History</h3>
+    </div>
+
+    @if (_accounts.Count == 0)
+    {
+        <div class="alert alert-info text-center">No accounts found.</div>
+    }
+    else
+    {
+        <!-- Välj konto - Styling uppdaterad, logik identisk -->
+        <div class="card shadow-sm border-0 mb-4 bg-light">
+            <div class="card-body">
+                <label class="form-label fw-bold text-muted small uppercase">Choose Account</label>
+                <InputSelect TValue="Guid" class="form-select form-select-lg border-0 bg-transparent" @bind-Value="SelectedAccountId">
+                    <option value="@Guid.Empty">All accounts</option>
+                    @foreach (var account in _accounts)
+                    {
+                        <option value="@account.Id">@account.Name - Balance: @account.Balance.ToString("N2")</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+
+        <!-- Filter - Samma rader och kolumner som originalet -->
+        <div class="card card-body border-0 shadow-sm mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">From date</label>
+                    <InputDate @bind-Value="fromDate" class="form-control form-control-sm" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">To date</label>
+                    <InputDate @bind-Value="toDate" class="form-control form-control-sm" />
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Type of transaction</label>
+                    <InputSelect @bind-Value="selectedType" class="form-select form-select-sm">
+                        <option value="">All transactions</option>
+                        @foreach (var type in Enum.GetValues<TransactionType>())
+                        {
+                            <option value="@type">@type</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sortering - Samma knappar -->
+        <div class="mb-3 d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" @onclick="() => SetSort(SortKey.Date)">
+                ↓↑ Date @(currentKey == SortKey.Date ? (descending ? "↓" : "↑") : "")
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="() => SetSort(SortKey.Amount)">
+                ↓↑ Amount @(currentKey == SortKey.Amount ? (descending ? "↓" : "↑") : "")
+            </button>
+        </div>
+    }
+
+    @{
+        var transactions = sortedTransaction().ToList();
+    }
+    
+    @if (!transactions.Any())
+    {
+        <div class="text-center p-5 border rounded bg-white">
+            <p class="text-muted mb-0">No transactions found.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Transaktionslista istället för tabell för bättre visuell stil -->
+        <div class="list-group shadow-sm rounded">
+            @foreach (var transaction in transactions)
+            {
+                <div class="list-group-item list-group-item-action py-3 border-0 border-bottom">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">@transaction.TransactionType</span>
+                                <span class="fw-bold">@transaction.Amount.ToString("N2")</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1 text-muted small">
+                                <span>@transaction.TimeStamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</span>
+                                
+                                <!-- Återställd from -> to logik exakt som din -->
+                                @if (transaction.FromAccountId.HasValue || transaction.ToAccountId.HasValue)
+                                {
+                                    <span class="px-2 bg-light rounded border">
+                                        @(transaction.FromAccountId.HasValue ? transaction.FromAccountId.Value.ToString()[..6] : "------")
+                                        ->
+                                        @(transaction.ToAccountId.HasValue ? transaction.ToAccountId.Value.ToString()[..6] : "------")
+                                    </span>
+                                }
+                                
+                                <span>After: @transaction.BalanceAfterTransaction.ToString("N2")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Code -->
+@code 
 {
+    //Instance variables
+    private List<BankAccount> _accounts = new();
+    private BankAccount? _selectedAccount;
+    private Guid _selectedAccountId = Guid.Empty;
+    private SortKey currentKey = SortKey.Date;
+    private bool descending = true;
 
+    //Filter parameters
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private string? selectedType;
+
+    //Sorting options
+    private enum SortKey
+    {
+        Date, 
+        Amount
+    }
+
+    /// <summary>
+    /// Changes the current sorting key and toggles the sorting direction.
+    /// </summary>
+    /// <param name="sortKey">Key to sort by amount and date.</param>
+    private void SetSort(SortKey sortKey)
+    {
+        if(currentKey == sortKey)
+        {
+            descending = !descending;
+        }
+        else
+        {
+            currentKey = sortKey;
+            descending = true; 
+        }
+    }
+
+    /// <summary>
+    /// Sets or gets accountId.
+    /// </summary>
+    private Guid SelectedAccountId
+    {
+        get => _selectedAccountId;
+        set
+        {
+            if (_selectedAccountId == value)
+            {
+                return;
+            }
+            _selectedAccountId = value;
+            _selectedAccount = _accounts.FirstOrDefault(account => account.Id == value);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Loads all bank accounts from the account service when initialized.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        await AccountService.EnsureLoadedAsync();
+        _accounts = AccountService.GetAccounts();
+
+        // Show all accounts as default
+        if (_accounts.Count > 0)
+        {
+            _selectedAccountId = Guid.Empty;
+            _selectedAccount = null;
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Returns a transaction list that is sorted and filtered for the selected account.
+    /// </summary>
+    /// <returns>Filtered and sorted enumerable list of transactions.</returns>
+    private IEnumerable<Transaction> sortedTransaction()
+    {
+        IEnumerable<Transaction> sortedList;
+
+        if (_selectedAccountId == Guid.Empty)
+        {
+            sortedList = _accounts.SelectMany(a => a.Transactions);
+        }
+        else
+        {
+            _selectedAccount = _accounts.FirstOrDefault(a => a.Id == _selectedAccountId);
+            if (_selectedAccount == null)
+            {
+                return Enumerable.Empty<Transaction>();
+            }
+
+            sortedList = _selectedAccount.Transactions.AsEnumerable();
+        }
+
+        // Filter on date
+        if (fromDate.HasValue)
+        {
+            sortedList = sortedList.Where(t => t.TimeStamp.Date >= fromDate.Value.Date);
+        }
+
+        if (toDate.HasValue)
+        {
+            sortedList = sortedList.Where(t => t.TimeStamp.Date <= toDate.Value.Date);
+        }
+
+        // Filter on transaction type
+        if (!string.IsNullOrEmpty(selectedType) &&
+            Enum.TryParse<TransactionType>(selectedType, out var parsedType))
+        {
+            sortedList = sortedList.Where(t => t.TransactionType == parsedType);
+        }
+
+        // Sort on date and amount
+        sortedList = currentKey switch
+        {
+            SortKey.Amount => (descending 
+                ? sortedList.OrderByDescending(transaction => transaction.Amount)
+                : sortedList.OrderBy(transaction => transaction.Amount)),
+            SortKey.Date => (descending 
+                ? sortedList.OrderByDescending(transaction => transaction.TimeStamp)
+                : sortedList.OrderBy(transaction => transaction.TimeStamp))
+        };
+        return sortedList;
+    }
 }
